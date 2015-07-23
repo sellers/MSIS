@@ -14,20 +14,19 @@ the app - it's invocated by cloud-init
 #### Requirements:
 1. you need to have an AWS account to use
 2. you need to have python with boto support enabled
-3. you need to have /etc/boto.cfg or similar setup with key/secret
+3. you need to have /etc/boto.cfg or similar setup with key/secret for AWS acct.
+4. you need to have an AWS keypair setup and know the name of it
 
 #### Purpose:
 To complete the following:
 
-1. start an ec2 instance that runs a salt master (inf. setup)
-2. start an ec2 instnace that runs a flask+nginx+redis solution
-3. deploy a flask app that will test nginx+flask+redis
-5. ssh keys for AWS ssh login (call it aws_pt-user for now)
+1. start an ec2 instnace that deploys a flask+nginx+redis solution
+2. deploy a flask app that will test nginx+flask+redis
+3. setup ssh login using defined keys
 
 #### Usage:
-
+(--help will show command usage for deploy.py)
 1. make sure you have a ec2 account to use (and a .boto or /etc/boto.cfg file setup with the info)
 2. start the 3-tier app: `./deploy.py -t flask-nginx-redis.yaml -n my-three-tier 
-4. visit http://\<ip.of.step3.host\> and see the flask app respond, click link and see redis data of visitor info
-6. when done - you can use `./deploy.py --halt <instance id>` to halt instances
-
+3. visit http://\<ip.of.step2.host\> and see the flask app respond, click link and see redis data of visitor info
+4. when done - you can use `./deploy.py --halt <instance id> ...` to halt instance(s)
