@@ -1,0 +1,59 @@
+{# jinja2 #}
+#cloud-config
+# for DevOps Practicum Testing
+# objective: install stack of nginx+flask+redis
+output:
+ all: "|tee -a /var/tmp/cloudinit.out"
+hostname: {{ hostname }}
+manage_etc_hosts: true
+packages:
+ - redis-server
+ - python-pip
+ - python-boto
+ - python-redis
+ - nginx
+ - python-virtualenv
+ - python-dev
+ - build-essential
+ - git
+final_message: "The system is up, after $UPTIME seconds"
+bootcmd:
+runcmd:
+ - touch /DEVEL
+ - echo [Credentials] > /etc/default/boto
+ - echo aws_access_key_id = {{ aws_key }} >> /etc/default/boto
+ - echo aws_secret_access_key = {{ aws_secret }} >> /etc/default/boto
+ - echo [Boto] >> /etc/default/boto
+ - echo http_socket_timeout = http_socket_timeout = 1800 >> /etc/default/boto
+ - ln -s /etc/default/boto /root/.boto
+ - ln -s /etc/default/boto /home/ubuntu/.boto
+ - ln -s /etc/default/boto /etc/boto.cfg
+ - pip install awscli
+ - echo "cgseller-pt" > /root/S3_BUCKET
+ - |
+    python -c "
+    import boto
+    bucket=open('/root/S3_BUCKET', 'r').readline().strip()
+    boto.connect_s3().create_bucket(bucket)
+    " 
+ - mkdir /var/run/pt
+ - mkdir /var/log/pt
+ - mkdir /etc/pt
+ - chown www-data:www-data /var/run/pt
+ - chown www-data:www-data /var/log/pt
+ - mkdir /home/ubuntu/pt
+ - chown ubuntu /home/ubuntu/pt
+ - chgrp www-data /home/ubuntu/pt
+ - pip install virtualenv
+ - pip install uwsgi
+ - git clone https://github.com/sellers/MSIS.git /home/ubuntu/MSIS
+ - cp /home/ubuntu/MSIS/cloud-init/conf/pt_nginx.conf /etc/nginx/sites-available/pt
+ - cp /home/ubuntu/MSIS/cloud-init/conf/pt_uwsgi.ini /etc/pt/uwsgi.ini
+ - cp /home/ubuntu/MSIS/cloud-init/conf/pt_init.conf /etc/init/pt.conf
+ - ln -s /home/ubuntu/MSIS/cloud-init/pt.py /home/ubuntu/pt
+ - ln -s /etc/nginx/sites-available/pt /etc/nginx/sites-enabled/pt
+ - ln -s /etc/uwsgi/apps-available/pt.ini /etc/uwsgi/apps-enabled/pt.ini
+ - rm /etc/nginx/sites-enabled/default
+ - bash -c 'su - ubuntu -c /home/ubuntu/MSIS/cloud-init/setup_virtual.sh'
+ - service nginx restart
+ - service pt start
