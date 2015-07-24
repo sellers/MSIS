@@ -1,0 +1,76 @@
+{# jinja2 #}
+## SAMPLE OF WHAT DID @ PREVIOUS WORK
+#
+# Ubuntu repo for youwhoo packages and mirror  MASTER
+#
+# cloud-config
+# version 20140923
+output: {all: '| tee -a /var/log/name-cloud-init.log'}
+hostname: {{ hostname }}
+
+# $nameserver is part of a template, substituded on ctl.py
+bootcmd:
+ - mv /etc/dpkg/dpkg.cfg.d/multiarch /etc/dpkg/dpkg.cfg.d/multiarch.backup
+{% if in_ec2 %}
+ - echo nameserver {{ nameserver }} | resolvconf -a eth0
+ - resolvconf -u
+{% endif %}
+apt_preserve_sources_list: false
+apt_sources:
+ - source: deb http://repo.server.url/ubuntu/ trusty-name name
+ - source: deb http://repo.server.url/ubuntu/ trusty-name-dev name-dev
+
+packages:
+ - sysstat
+ - atop
+ - ubuntu-cloud-archive
+ - somename-mirror
+
+ssh_keys:
+ dsa_private: |
+  -----BEGIN DSA PRIVATE KEY-----
+  KEYHERE==
+  -----END DSA PRIVATE KEY-----
+
+ dsa_public: 
+ KEY HERE = user@site
+
+ rsa_private: |
+  -----BEGIN RSA PRIVATE KEY-----
+  KEY HERE
+  -----END RSA PRIVATE KEY-----
+
+ rsa_public: 
+ KEY HERE: user@site
+
+ ecdsa_private: |
+  -----BEGIN EC PRIVATE KEY-----
+  KEY HERE
+  -----END EC PRIVATE KEY-----
+  
+ ecdsa_public: KEY HERE = user@site
+
+runcmd:
+ - ln -s /home/ubuntu /home/username
+ - useradd -o -g 1000 -u 1000 -M -s /bin/bash -d /home/username -c 'linked default user (ubuntu)' username
+ - echo "created USER user linked to ubuntu user" | logger
+ - rm /etc/update-motd.d/10-help-text
+ - rm /etc/update-motd.d/51-cloudguest
+ - echo "export VISUAL=vi \nexport EDITOR=vi" > /etc/profile.d/custom_editor  
+ - echo "[Credentials]" > /root/.boto
+ - echo "aws_access_key_id=SHHHH" >> /root/.boto
+ - echo "aws_secret_access_key=PSSST" >> /root/.boto
+{% if 'repo-master' is {hostname} %}
+ - echo "{{ hostname }} so added mirror pkg from S3, apt-get -f -y install to force dependecy upgrade"
+ - echo "*/35 * * * *   username   /mirror/reprepro/reprepro.cron 1>/mirror/reprepro/logs/cron.log 2>&1" > /etc/cron.d/reprepro.master
+ - python -c "import boto; file='file-ubuntu-mirror-aws_current_amd64.deb'; boto.connect_s3().get_bucket('something-config.ec2.somewhere.site').get_key(file).get_contents_to_filename('/root/'+file)"
+ - dpkg -i /root/file-ubuntu-mirror-aws_current_amd64.deb
+ - apt-get -y -f install
+ - apt-key update
+ - apt-key update
+{% else %}
+ - echo "*/31 * * * *   username   /mirror/reprepro/reprepro.cron 'dist=precise-name-dev precise-name' 1>>/mirror/reprepro/logs/cron.log 2>&1" > /etc/cron.d/reprepro
+{% endif %}
+ - echo "$0 configuration complete" | logger
+
+final_message: "cloud-init: The system is configured"
